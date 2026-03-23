@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🛒 Your Cart - FullStack Cafe</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+<%- include('partials/header') %>
+
+<div class="max-w-5xl mx-auto my-10 px-5">
+
+<% if(!cart || cart.length === 0){ %>
+
+    <h2 class="text-2xl font-bold mb-4">Your cart is empty!</h2>
+
+<% } else { %>
+
+<h2 class="text-2xl font-bold mb-6">🛒 Your Selection</h2>
+
+<div class="overflow-x-auto rounded-xl shadow-sm">
+<table class="w-full bg-white border-collapse overflow-hidden">
+<thead class="bg-zinc-900 text-white text-left">
+<tr>
+<th class="p-4 font-medium">Item</th>
+<th class="p-4 font-medium">Name</th>
+<th class="p-4 font-medium">Price</th>
+<th class="p-4 font-medium">Quantity</th>
+<th class="p-4 font-medium">Subtotal</th>
+<th class="p-4 font-medium">Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+<% cart.forEach((item,index)=>{ %>
+
+<tr class="border-b border-gray-200 hover:bg-gray-50">
+
+<td class="p-4">
+<img src="<%= item.image %>" alt="<%= item.name %>" class="w-20 h-16 object-cover rounded-md shadow-sm">
+</td>
+
+<td class="p-4 font-semibold"><%= item.name %></td>
+
+<td class="p-4 text-gray-700">₹<%= item.price %></td>
+
+<td class="p-4">
+<div class="flex items-center gap-2">
+
+<button class="qty-btn qty-remove w-7 h-7 rounded-full border border-gray-300 bg-white font-bold cursor-pointer hover:bg-yellow-400 transition-colors flex justify-center items-center" data-index="<%= index %>">-</button>
+
+<span class="min-w-[24px] text-center font-medium">
+<%= item.quantity %>
+</span>
+
+<button class="qty-btn qty-add w-7 h-7 rounded-full border border-gray-300 bg-white font-bold cursor-pointer hover:bg-yellow-400 transition-colors flex justify-center items-center" data-index="<%= index %>">+</button>
+
+</div>
+</td>
+
+<td class="p-4 font-bold text-gray-900">
+₹<%= item.price * item.quantity %>
+</td>
+
+<td class="p-4">
+<button class="remove-btn border border-red-500 text-red-500 bg-white py-1.5 px-3 text-sm font-medium cursor-pointer rounded-md hover:bg-red-500 hover:text-white transition-colors"
+data-index="<%= index %>">
+Remove
+</button>
+</td>
+
+</tr>
+
+<% }) %>
+
+</tbody>
+</table>
+</div>
+
+<div class="mt-8 bg-white p-6 flex flex-col md:flex-row justify-between items-center rounded-xl shadow-sm gap-4">
+<h3 class="text-xl font-bold text-gray-900">
+Grand Total: ₹ <%= totalPrice %>
+</h3>
+
+<button id="checkoutBtn"
+class="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg cursor-pointer hover:bg-blue-700 transition-colors shadow-md">
+Place Order Now
+</button>
+</div>
+
+<% } %>
+
+</div>
+
+<script>
+
+/* ================= QUANTITY BUTTONS ================= */
+
+document.querySelectorAll(".qty-add").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+        handleAction(btn.dataset.index,"add");
+    });
+});
+
+document.querySelectorAll(".qty-remove").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+        handleAction(btn.dataset.index,"remove");
+    });
+});
+
+
+async function handleAction(index, action) {
+
+    try{
+        const response = await fetch("/products/update-quantity", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ index, action })
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            location.reload();
+        }else{
+            alert("Failed to update quantity");
+        }
+
+    }catch(err){
+        console.error(err);
+        alert("Server error while updating cart");
+    }
+}
+
+
+/* ================= REMOVE ITEM ================= */
+
+document.querySelectorAll(".remove-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+        removeItem(btn.dataset.index);
+    });
+});
+
+async function removeItem(index){
+
+    if(!confirm("Remove this item from cart?")) return;
+
+    try{
+        const response = await fetch("/products/remove-item",{
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ index })
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            location.reload();
+        }
+
+    }catch(err){
+        console.error(err);
+        alert("Error removing item");
+    }
+}
+
+
+/* ================= CHECKOUT ================= */
+
+const checkoutBtn = document.getElementById("checkoutBtn");
+
+if(checkoutBtn){
+checkoutBtn.addEventListener("click", checkout);
+}
+
+async function checkout(){
+
+    try{
+        const response = await fetch("/products/checkout",{
+            method:"POST"
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            alert("🎉 Order Placed Successfully!");
+            window.location.href="/products/my-orders";
+        }else{
+            alert(data.message || "Checkout failed");
+        }
+
+    }catch(err){
+        console.error(err);
+        alert("Checkout error");
+    }
+}
+
+</script>
+
+<%- include('partials/footer') %>
+
+</body>
+</html>

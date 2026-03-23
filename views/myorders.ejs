@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>My Orders - FullStack Cafe</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+<%- include('partials/header') %>
+
+<div class="max-w-3xl mx-auto my-12 px-5">
+<h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-8">📜 My Order History</h1>
+
+<% if (orders && orders.length > 0) { %>
+
+    <% orders.forEach(order => { %>
+        <div class="bg-white rounded-2xl p-6 mb-6 shadow-sm border-l-[6px] border-indigo-500 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-600 group">
+
+            <div class="flex justify-between items-start border-b border-dashed border-slate-200 pb-4 mb-4">
+                <div>
+                    <strong class="text-lg text-slate-800 group-hover:text-indigo-600 transition-colors">
+                        Order #<%= order._id.toString().slice(-6).toUpperCase() %>
+                    </strong>
+
+                    <div class="text-xs text-slate-400 mt-1 font-medium">
+                        <%= new Date(order.createdAt).toLocaleString() %>
+                    </div>
+                </div>
+
+                <!-- ⭐ IMPORTANT: add data-id -->
+                <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm"
+                      data-order-id="<%= order._id %>">
+                      <%= order.status %>
+                </span>
+            </div>
+
+            <ul class="list-none p-0 m-0">
+                <% order.items.forEach(item => { %>
+                    <li class="flex justify-between mb-3 text-slate-600 font-medium">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+                            <%= item.name %> <span class="text-slate-400 text-sm">(x<%= item.quantity %>)</span>
+                        </span>
+                        <span class="text-slate-800 font-semibold">₹<%= item.price * item.quantity %></span>
+                    </li>
+                <% }) %>
+            </ul>
+
+            <div class="flex justify-between items-center mt-5 pt-5 border-t border-slate-100">
+                <form action="/products/reorder/<%= order._id %>" method="POST">
+                    <button type="submit" class="flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 py-2 px-5 rounded-lg font-bold cursor-pointer transition-all duration-300 hover:bg-indigo-600 hover:text-white hover:shadow-md hover:-translate-y-0.5">
+                        🔄 Reorder
+                    </button>
+                </form>
+
+                <div class="text-xl font-extrabold text-emerald-600">
+                    Total: ₹<%= order.totalAmount %>
+                </div>
+            </div>
+
+        </div>
+    <% }) %>
+
+<% } else { %>
+
+<div class="text-center mt-24">
+    <h2 class="text-2xl font-bold text-slate-700 mb-3">No orders found!</h2>
+    <p class="text-slate-500 mb-8">Looks like you haven't tasted our coffee yet.</p>
+    <a href="/products" class="inline-block bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all duration-300 hover:bg-indigo-700 hover:-translate-y-1 hover:shadow-lg no-underline">Browse Menu</a>
+</div>
+
+<% } %>
+
+</div>
+
+<%- include('partials/footer') %>
+
+
+<!-- ================= LIVE STATUS UPDATE SCRIPT ================= -->
+
+<script>
+async function refreshOrderStatus() {
+    try {
+        const res = await fetch("/products/my-orders-data");
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        data.orders.forEach(order => {
+            const badge =
+                document.querySelector(
+                    `[data-order-id="${order._id}"]`
+                );
+
+            if (badge) {
+                badge.innerText = order.status;
+            }
+        });
+
+    } catch (err) {
+        console.log("Auto refresh error");
+    }
+}
+
+// refresh every 5 seconds
+setInterval(refreshOrderStatus, 5000);
+</script>
+
+</body>
+</html>
