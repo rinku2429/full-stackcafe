@@ -47,6 +47,22 @@ body{
     opacity:.9;
 }
 
+.logout-btn{
+    background:white;
+    color:var(--admin-red);
+    border:2px solid var(--admin-red);
+    padding:8px 20px;
+    border-radius:8px;
+    text-decoration:none;
+    font-weight:bold;
+    transition:.3s;
+}
+
+.logout-btn:hover{
+    background:var(--admin-red);
+    color:white;
+}
+
 .stats-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -135,9 +151,15 @@ select{
 <p>Admin Dashboard</p>
 </div>
 
-<a href="/admin/add-product" class="add-product-btn">
-+ Add Product
-</a>
+<div style="display: flex; gap: 15px; align-items: center;">
+    <a href="/admin/add-product" class="add-product-btn">
+    + Add Product
+    </a>
+    
+    <a href="/logout" class="logout-btn">
+    Logout
+    </a>
+</div>
 
 </div>
 
@@ -251,6 +273,7 @@ Cancelled
 <tr>
 <th>Product</th>
 <th>Price</th>
+<th>Stock</th>
 <th>Status</th>
 </tr>
 </thead>
@@ -266,8 +289,12 @@ Cancelled
 <td>₹<%= product.price %></td>
 
 <td>
-<span class="status-badge <%= product.isActive ? 'status-available':'status-soldout' %>">
-<%= product.isActive ? 'Available':'Sold Out' %>
+<input type="number" value="<%= product.stock !== undefined ? product.stock : 50 %>" min="0" style="width:60px; padding:5px; border:1px solid #ccc; border-radius:4px;" onchange="updateStock('<%= product._id %>', this.value)">
+</td>
+
+<td>
+<span class="status-badge <%= product.isAvailable ? 'status-available':'status-soldout' %>" onclick="toggleProductStatus('<%= product._id %>')" style="cursor: pointer; transition: opacity 0.2s;" title="Click to toggle status" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1">
+<%= product.isAvailable ? 'Available' : 'Sold Out' %>
 </span>
 </td>
 
@@ -328,6 +355,40 @@ alert("Order Status Updated");
 })
 .catch(err=>console.log(err));
 
+}
+
+/* PRODUCT STOCK UPDATE */
+
+function updateStock(productId, stock){
+    fetch(`/admin/product/update-stock/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stock })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            // Optional visual feedback
+            console.log("Stock updated to " + data.stock);
+        }
+    })
+    .catch(err => console.log(err));
+}
+
+/* PRODUCT STATUS TOGGLE */
+function toggleProductStatus(productId) {
+    fetch(`/admin/product/toggle-status/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            // Refresh page to show updated status visually
+            window.location.reload(); 
+        }
+    })
+    .catch(err => console.log(err));
 }
 
 </script>

@@ -29,9 +29,16 @@
                     </div>
                 </div>
 
-                <!-- ⭐ IMPORTANT: add data-id -->
-                <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm"
-                      data-order-id="<%= order._id %>">
+                <% 
+                let badgeColor = 'bg-slate-100 text-slate-700';
+                if(order.status === 'Pending') badgeColor = 'bg-amber-100 text-amber-700';
+                if(order.status === 'Preparing') badgeColor = 'bg-blue-100 text-blue-700';
+                if(order.status === 'Completed') badgeColor = 'bg-emerald-100 text-emerald-700';
+                if(order.status === 'Cancelled') badgeColor = 'bg-red-100 text-red-700';
+                %>
+                <span class="<%= badgeColor %> px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm transition-colors duration-300"
+                      data-order-id="<%= order._id %>"
+                      data-current-status="<%= order.status %>">
                       <%= order.status %>
                 </span>
             </div>
@@ -95,7 +102,20 @@ async function refreshOrderStatus() {
                 );
 
             if (badge) {
-                badge.innerText = order.status;
+                        const currentStatus = badge.getAttribute("data-current-status");
+                        
+                        if (currentStatus !== order.status) {
+                            badge.innerText = order.status;
+                            badge.setAttribute("data-current-status", order.status);
+                            
+                            // Update colors dynamically without refreshing the page
+                            badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm transition-colors duration-300";
+                            
+                            if(order.status === 'Pending') badge.classList.add('bg-amber-100', 'text-amber-700');
+                            if(order.status === 'Preparing') badge.classList.add('bg-blue-100', 'text-blue-700');
+                            if(order.status === 'Completed') badge.classList.add('bg-emerald-100', 'text-emerald-700');
+                            if(order.status === 'Cancelled') badge.classList.add('bg-red-100', 'text-red-700');
+                        }
             }
         });
 

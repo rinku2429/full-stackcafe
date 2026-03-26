@@ -81,34 +81,20 @@ router.patch(
 );
 
 
+router.patch(
+    "/product/update-stock/:id",
+    requireAuth,
+    adminOnly,
+    adminController.updateProductStock
+);
+
 /* ================= ORDER STATUS UPDATE ================= */
 
-router.post("/order/status", requireAuth, adminOnly, async (req, res) => {
-    try {
-        const { orderId, status } = req.body;
-
-        const updatedOrder = await Order.findByIdAndUpdate(
-            orderId,
-            { status },
-            { new: true }
-        );
-
-        if (!updatedOrder) {
-            return res.status(404).json({
-                success: false,
-                message: "Order not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            status: updatedOrder.status
-        });
-
-    } catch (err) {
-        console.error("Order Update Error:", err);
-        res.status(500).json({ success: false });
-    }
-});
+router.post(
+    "/update-order-status/:id",
+    requireAuth,
+    adminOnly,
+    adminController.updateOrderStatus
+);
 
 module.exports = router;

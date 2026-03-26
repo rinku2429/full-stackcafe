@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product"); // Needed to update stock
 
 
 /* =====================================================
@@ -21,6 +22,17 @@ exports.checkout = async (req, res) => {
                 success: false,
                 message: "Login required"
             });
+        }
+
+        // ✅ VERIFY INVENTORY STOCK BEFORE PLACING ORDER
+        for (const item of cart) {
+            const product = await Product.findOne({ name: item.name });
+            if (!product || product.stock < item.quantity) {
+                return res.json({
+                    success: false,
+                    message: `Not enough stock for ${item.name}. Only ${product ? product.stock : 0} left!`
+                });
+            }
         }
 
         const totalAmount = cart.reduce(
@@ -104,11 +116,23 @@ exports.updateOrderStatus = async (req, res) => {
 
         const { status } = req.body;
 
-        await Order.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        // ✅ DECREASE STOCK ONLY WHEN DELIVERED
+        if (status === "Delivered" && order.status !== "Delivered") {
+            for (const item of order.items) {
+                await Product.updateOne(
+                    { name: item.name },
+                    { $inc: { stock: -item.quantity } }
+                );
+            }
+        }
+
+        order.status = status;
+        await order.save();
 
         res.json({
             success: true,

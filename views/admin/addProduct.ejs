@@ -14,10 +14,13 @@
             <form action="/admin/add-product" method="POST" enctype="multipart/form-data">
                 
                 <label style="font-weight:bold; display:block; margin-bottom:5px;">Name:</label>
-                <input type="text" name="name" placeholder="E.g., Cheese Burger" required>
+                <input type="text" name="name" placeholder="E.g., sahi panner with roti" required>
                 
                 <label style="font-weight:bold; display:block; margin-bottom:5px;">Price (₹):</label>
-                <input type="number" name="price" placeholder="E.g., 99" required min="0">
+                <input type="number" name="price" placeholder="E.g., 250" required min="0">
+
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Stock Quantity:</label>
+                <input type="number" name="stock" placeholder="E.g., 50" required min="0" value="50">
 
                 <label style="font-weight:bold; display:block; margin-bottom:5px;">Category:</label>
                 <select name="category" required>
@@ -50,7 +53,7 @@
                             <img src="<%= product.image %>" alt="<%= product.name %>" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
                             <div>
                                 <strong style="display: block; font-size: 16px;"><%= product.name %></strong>
-                                <span style="color: #666;">₹<%= product.price %> - <span style="text-transform: capitalize;"><%= product.category %></span></span>
+                                <span style="color: #666;">₹<%= product.price %> - <span style="text-transform: capitalize;"><%= product.category %></span> | Stock: <%= product.stock !== undefined ? product.stock : 'N/A' %></span>
                             </div>
                         </div>
                         

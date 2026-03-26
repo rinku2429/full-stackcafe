@@ -80,15 +80,24 @@ exports.updateOrderStatus = async (req, res) => {
         const { status } = req.body;
         const orderId = req.params.id;
 
-        const updatedOrder = await Order.findByIdAndUpdate(
-            orderId,
-            { status },
-            { new: true }
-        );
+        const updatedOrder = await Order.findById(orderId);
 
         if (!updatedOrder) {
-            return res.status(404).send("Order not found");
+            return res.status(404).json({ success: false, message: "Order not found" });
         }
+
+        // ✅ DECREASE STOCK ONLY WHEN DELIVERED
+        if (status === "Delivered" && updatedOrder.status !== "Delivered") {
+            for (const item of updatedOrder.items) {
+                await Product.updateOne(
+                    { name: item.name },
+                    { $inc: { stock: -item.quantity } }
+                );
+            }
+        }
+
+        updatedOrder.status = status;
+        await updatedOrder.save();
 
         // --- 🔔 PUSH NOTIFICATION TO CUSTOMER 🔔 ---
         const subscriptions = req.app.locals.subscriptions || [];
@@ -110,11 +119,11 @@ exports.updateOrderStatus = async (req, res) => {
         }
         // -------------------------------------------
 
-        res.redirect("/admin/dashboard");
+        res.json({ success: true, message: "Order status updated successfully" });
 
     } catch (err) {
         console.error("Order Status Update Error:", err);
-        res.status(500).send("Failed to update order");
+        res.status(500).json({ success: false, message: "Failed to update order" });
     }
 };
 
@@ -149,6 +158,29 @@ exports.toggleProductStatus = async (req, res) => {
 };
 
 
+/* ================= UPDATE PRODUCT STOCK ================= */
+
+exports.updateProductStock = async (req, res) => {
+    try {
+        const { stock } = req.body;
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            { stock: Number(stock) },
+            { new: true }
+        );
+
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+
+        res.json({ success: true, stock: product.stock });
+
+    } catch (err) {
+        console.error("Stock Update Error:", err);
+        res.status(500).json({ success: false });
+    }
+};
+
 /* ================= SHOW ADD PRODUCT PAGE ================= */
 
 exports.getAddProduct = (req, res) => {
@@ -163,13 +195,14 @@ exports.getAddProduct = (req, res) => {
 exports.postAddProduct = async (req, res) => {
     try {
 
-        const { name, price, category, description } = req.body;
+        const { name, price, category, description, stock } = req.body;
 
         const product = new Product({
             name,
             price,
             category,
             description,
+            stock: stock ? Number(stock) : 50, // Save stock
             // ✅ safe image handling
             image: req.file
                 ? "/uploads/" + req.file.filename
@@ -177,6 +210,9 @@ exports.postAddProduct = async (req, res) => {
         });
 
         await product.save();
+
+        // Print the product in the exact seed format requested to the terminal
+        console.log(`\n{ name: "${name}", price: ${price}, image: "${product.image}", category: "${category}", description: "${description}" },\n`);
 
         // redirect back to dashboard
         res.redirect("/admin/dashboard");

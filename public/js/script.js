@@ -42,16 +42,45 @@ function displayFoods(items) {
         card.dataset.price = food.price;
         card.dataset.description = food.description || "Delicious item from our menu!";
 
+        // ✅ Check if out of stock
+        const isOutOfStock = food.stock <= 0;
+
         card.innerHTML = `
-            <img src="${food.image || '/images/default.png'}" alt="${food.name}" class="food-img">
-            <h3>${food.name}</h3>
-            <p>₹${food.price}</p>
-            <button class="cart-btn">Add To Cart 🛒</button>
+            <div style="position:relative;">
+                <img src="${food.image || '/images/default.png'}" alt="${food.name}" class="food-img" style="${isOutOfStock ? 'filter: blur(3px) grayscale(80%); opacity: 0.8;' : ''}">
+                ${isOutOfStock ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(255,0,0,0.8); color:white; padding:5px 15px; border-radius:20px; font-weight:bold; letter-spacing:1px; z-index:10;">SOLD OUT</div>' : ''}
+            </div>
+            <h3 style="${isOutOfStock ? 'color: #999;' : ''}">${food.name}</h3>
+            <p style="${isOutOfStock ? 'color: #999;' : ''}">₹${food.price} <span class="stock-text" style="font-size: 13px; color: ${isOutOfStock ? '#999' : '#e67e22'}; float: right; font-weight: bold;">Stock: ${food.stock}</span></p>
+            <div class="action-container" style="margin: 15px;">
+                <button class="cart-btn main-add-btn" style="margin: 0; width: 100%;" ${isOutOfStock ? 'disabled style="background: #ccc; cursor: not-allowed; color: #666;"' : ''}>
+                    ${isOutOfStock ? 'Out of Stock ❌' : 'Add To Cart 🛒'}
+                </button>
+                <div class="qty-controls" style="display: none; justify-content: space-between; align-items: center; background: var(--primary); padding: 5px 10px; border-radius: 8px;">
+                    <button class="decrease-btn" style="background: var(--accent); color: #000; border: none; border-radius: 4px; width: 30px; height: 30px; cursor: pointer; font-weight: bold; font-size: 18px;">-</button>
+                    <span class="qty-val" style="color: white; font-weight: bold; font-size: 16px;">1</span>
+                    <button class="increase-btn" style="background: var(--accent); color: #000; border: none; border-radius: 4px; width: 30px; height: 30px; cursor: pointer; font-weight: bold; font-size: 18px;">+</button>
+                </div>
+            </div>
         `;
 
         // ---------- ADD TO CART (FIXED ROUTE) ----------
-        const btn = card.querySelector(".cart-btn");
-        btn.addEventListener("click", () => {
+        if (!isOutOfStock) {
+            const mainAddBtn = card.querySelector(".main-add-btn");
+            const qtyControls = card.querySelector(".qty-controls");
+            const decreaseBtn = card.querySelector(".decrease-btn");
+            const increaseBtn = card.querySelector(".increase-btn");
+            const qtyVal = card.querySelector(".qty-val");
+            const stockText = card.querySelector(".stock-text");
+
+            let currentQty = 0;
+
+            const updateBadge = (count) => {
+                const badge = document.getElementById("cart-count");
+                if (badge && count !== undefined) badge.textContent = count;
+            };
+
+            mainAddBtn.addEventListener("click", () => {
             fetch("/products/add-to-cart", { // URL updated to match app.js prefix
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -64,12 +93,15 @@ function displayFoods(items) {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert("✅ " + food.name + " added to cart!");
-                    // Update Cart Count Badge in Header if it exists
-                    const badge = document.getElementById("cart-count");
-                    if (badge && data.cartCount !== undefined) {
-                        badge.textContent = data.cartCount;
-                    }
+                    
+                    currentQty = 1;
+                    mainAddBtn.style.display = "none";
+                    qtyControls.style.display = "flex";
+                    qtyVal.textContent = currentQty;
+                    updateBadge(data.cartCount);
+
+                    food.stock--;
+                    stockText.textContent = `Stock: ${food.stock}`;
                 } else {
                     alert("❌ Could not add item. " + (data.message || ""));
                 }
@@ -79,6 +111,55 @@ function displayFoods(items) {
                 alert("❌ Error adding item to cart.");
             });
         });
+
+            increaseBtn.addEventListener("click", () => {
+                if (food.stock <= 0) {
+                    alert("No more stock available!");
+                    return;
+                }
+                fetch("/products/add-to-cart", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: food.name, price: food.price, image: food.image })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentQty++;
+                        qtyVal.textContent = currentQty;
+                        updateBadge(data.cartCount);
+                        
+                        food.stock--;
+                        stockText.textContent = `Stock: ${food.stock}`;
+                    }
+                });
+            });
+
+            decreaseBtn.addEventListener("click", () => {
+                fetch("/products/update-quantity", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: food.name, action: "remove" })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentQty--;
+                        updateBadge(data.cartCount);
+                        
+                        food.stock++;
+                        stockText.textContent = `Stock: ${food.stock}`;
+
+                        if (currentQty <= 0) {
+                            qtyControls.style.display = "none";
+                            mainAddBtn.style.display = "block";
+                        } else {
+                            qtyVal.textContent = currentQty;
+                        }
+                    }
+                });
+            });
+        }
 
         container.appendChild(card);
     });

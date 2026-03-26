@@ -95,19 +95,29 @@ exports.addToCart = (req, res) => {
 
 exports.updateQuantity = (req, res) => {
 
-    const { index, action } = req.body;
+    const { index, name, action } = req.body;
     const cart = req.session.cart || [];
 
-    if (cart[index]) {
-        action === "add"
-            ? cart[index].quantity++
-            : cart[index].quantity--;
+    // Support finding by index OR name
+    let targetIndex = index;
+    if (targetIndex === undefined && name) {
+        targetIndex = cart.findIndex(i => i.name === name);
     }
 
-    if (cart[index]?.quantity <= 0)
-        cart.splice(index, 1);
+    if (targetIndex !== undefined && targetIndex !== -1 && cart[targetIndex]) {
+        action === "add"
+            ? cart[targetIndex].quantity++
+            : cart[targetIndex].quantity--;
 
-    req.session.save(() => res.json({ success: true }));
+        if (cart[targetIndex].quantity <= 0) {
+            cart.splice(targetIndex, 1);
+        }
+    }
+
+    req.session.save(() => {
+        const cartCount = req.session.cart.reduce((s, i) => s + i.quantity, 0);
+        res.json({ success: true, cartCount });
+    });
 };
 
 
