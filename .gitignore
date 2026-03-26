@@ -92,4 +92,4 @@ Thumbs.db
 .env.local
 .env.development.local
 .env.test.local
-.env.production.local
+.env.production.local<div class="admin-header" style="display: flex; justify-content: space-between; align-items: center;">
