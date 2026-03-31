@@ -13,10 +13,10 @@ console.log("Received support contact:", { name, email, product_name, message })
 
         await newSupportEntry.save();
 
-        // Redirect back to support page with a success message or alert
-        res.send("<script>alert('Message sent successfully!'); window.location.href='/support';</script>");
+        // Send a JSON response for fetch handling
+        res.json({ success: true, message: "Message sent successfully!" });
     } catch (error) {
         console.error("Support submission error:", error);
-        res.status(500).send("There was an error saving your message.");
+        res.status(500).json({ success: false, message: "There was an error saving your message." });
     }
 };

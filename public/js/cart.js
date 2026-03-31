@@ -88,7 +88,7 @@ cartButtons.forEach(button => {
                 });
 
             } else {
-                alert(data.message || "❌ Failed to add item to cart.");
+                console.error(data.message || "❌ Failed to add item to cart.");
             }
         })
         .catch(err => console.log(err));

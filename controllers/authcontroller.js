@@ -61,14 +61,14 @@ exports.signup = async (req, res) => {
         let { name, email, password } = req.body;
 
         if (!name || !email || !password) {
-            return res.status(400).send("All fields are required.");
+            return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
         email = email.trim().toLowerCase();
 
         const existingUser = await User.findOne({ email });
         if (existingUser)
-            return res.status(400).send("Email already registered.");
+            return res.status(400).json({ success: false, message: "Email already registered." });
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -81,11 +81,11 @@ exports.signup = async (req, res) => {
 
         await newUser.save();
 
-        res.redirect("/login?message=Account created! Please log in.");
+        res.json({ success: true, redirectUrl: "/login?message=Account created! Please log in." });
 
     } catch (err) {
         console.error("Signup Error:", err);
-        res.status(500).send("Error creating account.");
+        res.status(500).json({ success: false, message: "Error creating account." });
     }
 };
 
@@ -97,7 +97,7 @@ exports.login = async (req, res) => {
         let { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).send("Please provide both email and password.");
+            return res.status(400).json({ success: false, message: "Please provide both email and password." });
         }
 
         email = email.trim().toLowerCase();
@@ -105,7 +105,7 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).send("Invalid email or password.");
+            return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
 
         // Create JWT
@@ -124,15 +124,12 @@ exports.login = async (req, res) => {
 
         /* ===== ROLE BASED REDIRECT (MAIN FIX) ===== */
 
-        if (user.role === "admin") {
-            return res.redirect("/admin/dashboard"); // ✅ FIXED
-        }
-
-        return res.redirect("/products");
+        const redirectUrl = user.role === "admin" ? "/admin/dashboard" : "/products";
+        return res.json({ success: true, redirectUrl });
 
     } catch (err) {
         console.error("Detailed Login Error:", err);
-        res.status(500).send("Login error occurred.");
+        res.status(500).json({ success: false, message: "Login error occurred." });
     }
 };
 

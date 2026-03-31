@@ -103,18 +103,17 @@ function displayFoods(items) {
                     food.stock--;
                     stockText.textContent = `Stock: ${food.stock}`;
                 } else {
-                    alert("❌ Could not add item. " + (data.message || ""));
+                    console.error("❌ Could not add item. " + (data.message || ""));
                 }
             })
             .catch(err => {
                 console.error("Cart Error:", err);
-                alert("❌ Error adding item to cart.");
             });
         });
 
             increaseBtn.addEventListener("click", () => {
                 if (food.stock <= 0) {
-                    alert("No more stock available!");
+                    console.warn("No more stock available!");
                     return;
                 }
                 fetch("/products/add-to-cart", {
