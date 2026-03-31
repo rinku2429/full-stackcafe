@@ -6,7 +6,7 @@ const router = express.Router();
 const adminController = require("../controllers/admincontroller");
 const { requireAuth } = require("../controllers/authcontroller");
 const Order = require("../models/Order");
-const Product = require("../models/Product");
+const Product = require("../models/product");
 const upload = require("../middleware/multer"); // ✅ multer middleware
 
 /* ================= ADMIN CHECK ================= */
