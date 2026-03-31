@@ -1,5 +1,5 @@
 const Order = require("../models/Order");
-const Product = require("../models/product"); // Needed to update stock
+const Product = require("../models/Product"); // Needed to update stock
 
 
 /* =====================================================
