@@ -6,9 +6,7 @@ const jwt = require("jsonwebtoken");
 
 const SECRET_KEY = process.env.SECRET_KEY || "supersecretkey";
 
-
 /* ================= 1. CHECK AUTH ================= */
-
 exports.checkAuth = async (req, res, next) => {
     try {
         const token = req.cookies?.token;
@@ -20,7 +18,6 @@ exports.checkAuth = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, SECRET_KEY);
-
         const user = await User.findById(decoded.id).select("-password");
 
         if (!user) {
@@ -32,7 +29,6 @@ exports.checkAuth = async (req, res, next) => {
 
         req.user = user;
         res.locals.user = user;
-
         next();
 
     } catch (err) {
@@ -43,9 +39,7 @@ exports.checkAuth = async (req, res, next) => {
     }
 };
 
-
 /* ================= 2. REQUIRE AUTH ================= */
-
 exports.requireAuth = (req, res, next) => {
     if (!req.user) {
         return res.redirect("/login");
@@ -53,25 +47,20 @@ exports.requireAuth = (req, res, next) => {
     next();
 };
 
-
 /* ================= 3. SIGNUP ================= */
-
 exports.signup = async (req, res) => {
     try {
         let { name, email, password } = req.body;
-
         if (!name || !email || !password) {
-            return res.status(400).json({ success: false, message: "All fields are required." });
+            // If using standard HTML forms, you might prefer res.redirect('/signup?error=missing')
+            return res.status(400).send("All fields are required."); 
         }
 
         email = email.trim().toLowerCase();
-
         const existingUser = await User.findOne({ email });
-        if (existingUser)
-            return res.status(400).json({ success: false, message: "Email already registered." });
+        if (existingUser) return res.status(400).send("Email already registered.");
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const newUser = new User({
             name: name.trim(),
             email,
@@ -80,32 +69,30 @@ exports.signup = async (req, res) => {
         });
 
         await newUser.save();
-
-        res.json({ success: true, redirectUrl: "/login?message=Account created! Please log in." });
+        
+        // Redirecting directly to login page
+        res.redirect("/login");
 
     } catch (err) {
         console.error("Signup Error:", err);
-        res.status(500).json({ success: false, message: "Error creating account." });
+        res.status(500).send("Error creating account.");
     }
 };
 
-
-/* ================= 4. LOGIN (✅ FIXED REDIRECT) ================= */
-
+/* ================= 4. LOGIN (FIXED FOR BROWSER REDIRECT) ================= */
 exports.login = async (req, res) => {
     try {
         let { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ success: false, message: "Please provide both email and password." });
+            return res.status(400).send("Please provide both email and password.");
         }
 
         email = email.trim().toLowerCase();
-
         const user = await User.findOne({ email });
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ success: false, message: "Invalid email or password." });
+            return res.status(401).send("Invalid email or password.");
         }
 
         // Create JWT
@@ -115,6 +102,7 @@ exports.login = async (req, res) => {
             { expiresIn: "1d" }
         );
 
+        // Set Cookie
         res.cookie("token", token, {
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000,
@@ -122,20 +110,20 @@ exports.login = async (req, res) => {
             secure: process.env.NODE_ENV === "production"
         });
 
-        /* ===== ROLE BASED REDIRECT (MAIN FIX) ===== */
-
-        const redirectUrl = user.role === "admin" ? "/admin/dashboard" : "/products";
-        return res.json({ success: true, redirectUrl });
+        /* ===== REDIRECTING INSTEAD OF SENDING JSON ===== */
+        if (user.role === "admin") {
+            return res.redirect("/admin/dashboard");
+        } else {
+            return res.redirect("/products");
+        }
 
     } catch (err) {
         console.error("Detailed Login Error:", err);
-        res.status(500).json({ success: false, message: "Login error occurred." });
+        res.status(500).send("Login error occurred.");
     }
 };
 
-
 /* ================= 5. LOGOUT ================= */
-
 exports.logout = (req, res) => {
     res.clearCookie("token");
     res.redirect("/products");

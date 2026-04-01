@@ -7,12 +7,10 @@ let foodItems = [];
 let selectedCategory = "all";
 
 /* ================= FETCH PRODUCTS ================= */
-// Note: Ensure your backend has a route: router.get("/api/products", productController.getAllProductsJSON)
 if (container) {
-    fetch("/products") // Adjusting to your product route if it returns JSON
+    fetch("/products") 
         .then(res => {
             if (!res.ok) throw new Error("Server error");
-            // Check if response is JSON before parsing
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 return res.json();
@@ -21,7 +19,7 @@ if (container) {
             }
         })
         .then(data => {
-            foodItems = data.foodItems || data; // Handle different response structures
+            foodItems = data.foodItems || data; 
             displayFoods(foodItems);
         })
         .catch(err => console.log("Note: API fetch failed. If you use server-side rendering, this is normal.", err));
@@ -42,7 +40,6 @@ function displayFoods(items) {
         card.dataset.price = food.price;
         card.dataset.description = food.description || "Delicious item from our menu!";
 
-        // ✅ Check if out of stock
         const isOutOfStock = food.stock <= 0;
 
         card.innerHTML = `
@@ -64,7 +61,6 @@ function displayFoods(items) {
             </div>
         `;
 
-        // ---------- ADD TO CART (FIXED ROUTE) ----------
         if (!isOutOfStock) {
             const mainAddBtn = card.querySelector(".main-add-btn");
             const qtyControls = card.querySelector(".qty-controls");
@@ -81,41 +77,27 @@ function displayFoods(items) {
             };
 
             mainAddBtn.addEventListener("click", () => {
-            fetch("/products/add-to-cart", { // URL updated to match app.js prefix
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: food.name,
-                    price: food.price,
-                    image: food.image
+                fetch("/products/add-to-cart", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: food.name, price: food.price, image: food.image })
                 })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    
-                    currentQty = 1;
-                    mainAddBtn.style.display = "none";
-                    qtyControls.style.display = "flex";
-                    qtyVal.textContent = currentQty;
-                    updateBadge(data.cartCount);
-
-                    food.stock--;
-                    stockText.textContent = `Stock: ${food.stock}`;
-                } else {
-                    console.error("❌ Could not add item. " + (data.message || ""));
-                }
-            })
-            .catch(err => {
-                console.error("Cart Error:", err);
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentQty = 1;
+                        mainAddBtn.style.display = "none";
+                        qtyControls.style.display = "flex";
+                        qtyVal.textContent = currentQty;
+                        updateBadge(data.cartCount);
+                        food.stock--;
+                        stockText.textContent = `Stock: ${food.stock}`;
+                    }
+                });
             });
-        });
 
             increaseBtn.addEventListener("click", () => {
-                if (food.stock <= 0) {
-                    console.warn("No more stock available!");
-                    return;
-                }
+                if (food.stock <= 0) return;
                 fetch("/products/add-to-cart", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -127,7 +109,6 @@ function displayFoods(items) {
                         currentQty++;
                         qtyVal.textContent = currentQty;
                         updateBadge(data.cartCount);
-                        
                         food.stock--;
                         stockText.textContent = `Stock: ${food.stock}`;
                     }
@@ -145,10 +126,8 @@ function displayFoods(items) {
                     if (data.success) {
                         currentQty--;
                         updateBadge(data.cartCount);
-                        
                         food.stock++;
                         stockText.textContent = `Stock: ${food.stock}`;
-
                         if (currentQty <= 0) {
                             qtyControls.style.display = "none";
                             mainAddBtn.style.display = "block";
@@ -159,10 +138,8 @@ function displayFoods(items) {
                 });
             });
         }
-
         container.appendChild(card);
     });
-
     initImagePopup();
 }
 
@@ -172,56 +149,33 @@ function filterCategory(category) {
     applyFilters();
 }
 
-function searchFood() {
-    applyFilters();
-}
-
 function applyFilters() {
     const searchText = searchInput ? searchInput.value.toLowerCase().trim() : "";
     const cards = document.querySelectorAll(".card");
-
     cards.forEach(card => {
         const foodName = card.dataset.name ? card.dataset.name.toLowerCase() : "";
         const foodCategory = card.dataset.category || "all";
-
         const categoryMatch = selectedCategory === "all" || foodCategory === selectedCategory;
         const searchMatch = foodName.includes(searchText);
-
         card.style.display = (categoryMatch && searchMatch) ? "" : "none";
     });
 }
 
 if (filter) filter.addEventListener("change", e => filterCategory(e.target.value));
-if (searchInput) searchInput.addEventListener("input", searchFood);
+if (searchInput) searchInput.addEventListener("input", () => applyFilters());
 
 /* ================= IMAGE POPUP FUNCTION ================= */
 function initImagePopup() {
     let popup = document.getElementById("imagePopup");
-    
     if (!popup) {
         popup = document.createElement("div");
         popup.id = "imagePopup";
-        popup.style.cssText = `
-            display:none; position:fixed; top:0; left:0;
-            width:100%; height:100%; background: rgba(0,0,0,0.85);
-            justify-content:center; align-items:center;
-            z-index:1000; flex-direction: column; color:white;
-            text-align:center; padding:20px; cursor: pointer;
-        `;
+        popup.style.cssText = `display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:1000; flex-direction: column; color:white; text-align:center; padding:20px; cursor: pointer;`;
         document.body.appendChild(popup);
     }
-
-    // Clear previous content to avoid duplicates on re-render
-    popup.innerHTML = `
-        <img id="popupImg" style="max-width:90%; max-height:60%; border-radius:10px; border: 3px solid #ffcc00;">
-        <h2 id="popupName" style="margin-top:15px;"></h2>
-        <p id="popupPrice" style="font-size:20px; color:#27ae60; font-weight:bold;"></p>
-        <p id="popupDesc" style="max-width:600px; margin-top:10px; font-style:italic;"></p>
-        <p style="margin-top:20px; font-size:12px; color:#aaa;">Click anywhere to close</p>
-    `;
-
-    const foodImages = document.querySelectorAll(".food-img");
-    foodImages.forEach(image => {
+    popup.innerHTML = `<img id="popupImg" style="max-width:90%; max-height:60%; border-radius:10px; border: 3px solid #ffcc00;"><h2 id="popupName" style="margin-top:15px;"></h2><p id="popupPrice" style="font-size:20px; color:#27ae60; font-weight:bold;"></p><p id="popupDesc" style="max-width:600px; margin-top:10px; font-style:italic;"></p>`;
+    
+    document.querySelectorAll(".food-img").forEach(image => {
         image.addEventListener("click", () => {
             const card = image.closest(".card");
             document.getElementById("popupImg").src = image.src;
@@ -231,51 +185,77 @@ function initImagePopup() {
             popup.style.display = "flex";
         });
     });
-
     popup.onclick = () => popup.style.display = "none";
 }
 
-/* ================= PUSH NOTIFICATIONS ================= */
+/* ================= FIXED: LOGIN & SIGNUP HANDLER ================= */
+// This finds ALL forms on your page that submit to login or signup
+const authForms = document.querySelectorAll('form[action*="login"], form[action*="signup"]');
 
-// ⚠️ Replace this with the Public Key generated from `npx web-push generate-vapid-keys`
+authForms.forEach(form => {
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault(); 
+        
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch(form.action, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.redirectUrl) {
+                // REDIRECT TO THE URL PROVIDED BY BACKEND
+                window.location.href = result.redirectUrl; 
+            } else {
+                alert(result.message || "Action failed! Check your input.");
+            }
+        } catch (err) {
+            console.error("Auth error:", err);
+            alert("Connection error. Is the server running?");
+        }
+    });
+});
+
+// Check for messages in the URL (e.g., "?message=Account created")
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('message');
+    if (msg) {
+        // You can replace this with a nicer alert/toast later
+        alert(msg);
+    }
+});
+
+/* ================= PUSH NOTIFICATIONS ================= */
 const publicVapidKey = 'BCIYkRwzmWNoxtgzgpuDf8tytuODjCMwRlcnYQEH7rN5vPU4wYVZSmAPgOt3QxWvz05UWpQP5hf8hJ7tQAYjmG4'; 
 
 async function subscribeToPush() {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
-            console.log('Registering Service Worker...');
             const register = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service Worker Registered...');
-
-            console.log('Registering Push...');
             const subscription = await register.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
             });
-            console.log('Push Registered...');
-
-            console.log('Sending Subscription to Server...');
             await fetch('/subscribe', {
                 method: 'POST',
                 body: JSON.stringify(subscription),
                 headers: { 'content-type': 'application/json' }
             });
-            console.log('Subscription Sent...');
-        } catch (err) {
-            console.error('Push notification error:', err);
-        }
+        } catch (err) { console.error('Push notification error:', err); }
     }
 }
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
+    for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
     return outputArray;
 }
